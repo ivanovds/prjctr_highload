@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  redis-master:
+    image: bitnami/redis:6.2
+    environment:
+      REDIS_REPLICATION_MODE: master
+      REDIS_PASSWORD: bitnami
+    volumes:
+      - ../data/redis/master_persistence:/bitnami
+
+  redis-replica:
+    image: bitnami/redis:6.2
+    depends_on:
+      - redis-master
+    environment:
+      REDIS_REPLICATION_MODE: slave
+      REDIS_MASTER_HOST: redis-master
+      REDIS_MASTER_PORT_NUMBER: 6379
+      REDIS_MASTER_PASSWORD: bitnami
+      REDIS_PASSWORD: bitnami_replica
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      REDIS_HOSTS: >
+        master:redis-master:6379:0:bitnami,
+        replica:redis-replica:6379:0:bitnami_replica
+    volumes:
+      - ./ops/redis_commander_connections.json:/redis-commander/config/local-production.json
+    logging:
+      driver: none
+    ports:
+      - 18081:8081
+    links:
+      - redis-master
+      - redis-replica

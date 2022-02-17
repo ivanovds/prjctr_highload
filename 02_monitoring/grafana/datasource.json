@@ -1,0 +1,22 @@
+{
+    "name":"InfluxDB",
+    "type":"influxdb",
+    "access":"proxy",
+    "url":"http://influxdb:8086",
+    "isDefault":true,
+    "jsonData":
+    {
+        "version":"Flux",
+        "httpMode":"POST",
+        "httpHeaderName1":"Authorization",
+        "defaultBucket":"web-monitoring-bucket",
+        "organization":"web-monitoring-org"
+    },
+    "version":1,
+    "readOnly":false,
+    "secureJsonData":
+    {
+        "httpHeaderValue1":"Token 302f3ef7-6752-4e98-a18d-3c0bf88a226e-d96b9f58-38e7-11ec-8d3d-0242ac130003",
+        "token":"12345678"
+    }
+}

@@ -1,0 +1,18 @@
+    {
+    "connections": [
+        {
+            "label":"master",
+            "host":"redis-master",
+            "port":"6379",
+            "password":"bitnami",
+            "dbIndex":0
+        },
+        {
+            "label":"replica",
+            "host":"redis-replica",
+            "port":"6379",
+            "password":"bitnami_replica",
+            "dbIndex":0
+        }
+    ]
+    }

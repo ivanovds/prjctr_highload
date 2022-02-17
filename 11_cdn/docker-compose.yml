@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+
+  bind:
+    image: ubuntu/bind9:9.16-21.10_beta
+    ports:
+    - "53:53/udp"
+    - "53:53/tcp"
+    - "10000:10000/tcp"
+    volumes:
+    - ./services/bind9:/etc/bind
+    networks:
+      hw13_subnet:
+        ipv4_address: 172.16.1.10
+
+  load_balancer_ua:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/nginx_ua.conf:/etc/nginx/conf.d/nginx.conf
+      - ./data/nginx/cache:/tmp/cache
+    ports:
+      - 80
+    networks:
+      hw13_subnet:
+        ipv4_address: 172.16.1.20
+    depends_on:
+      - server_ua1
+      - server_ua2
+      - server_ua3
+
+  load_balancer_world:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/nginx_world.conf:/etc/nginx/conf.d/nginx.conf
+      - ./data/nginx/cache:/tmp/cache
+    ports:
+      - 80
+    networks:
+      hw13_subnet:
+        ipv4_address: 172.16.1.30
+    depends_on:
+      - server_world1
+      - server_world2
+      - server_world3
+
+  server_ua1:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/static:/home/app/web/project/static
+    ports:
+      - 80
+    networks: 
+      - hw13_subnet
+
+  server_ua2:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/static:/home/app/web/project/static
+    ports:
+      - 80
+    networks: 
+      - hw13_subnet
+
+  server_ua3:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/static:/home/app/web/project/static
+    ports:
+      - 80
+    networks: 
+      - hw13_subnet
+
+  server_world1:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/static:/home/app/web/project/static
+    ports:
+      - 80
+    networks: 
+      - hw13_subnet
+
+  server_world2:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/static:/home/app/web/project/static
+    ports:
+      - 80
+    networks: 
+      - hw13_subnet
+
+  server_world3:
+    build: ./services/nginx
+    volumes:
+      - ./services/nginx/static:/home/app/web/project/static
+    ports:
+      - 80
+    networks: 
+      - hw13_subnet
+
+  tester:
+    build: ./services/tester
+    command: tail -f /dev/null
+    dns:
+      - 8.8.8.8
+      - 4.4.4.4
+      - 172.16.1.10
+    networks:
+      hw13_subnet:
+        ipv4_address: 172.16.1.100
+
+  siege:
+    image: yokogawa/siege
+    dns:
+      - 172.16.1.10
+    networks:
+      - hw13_subnet
+
+networks:
+  hw13_subnet:
+    external: true

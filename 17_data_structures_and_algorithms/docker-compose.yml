@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  # app:
+  #   build:
+  #     context: ./
+  #     dockerfile: ops/ruby.dockerfile
+  #   volumes:
+  #     - ./app/:/app
+  #   command: ruby /app/test.rb
+
+  app:
+    image: python:2.7
+    volumes:
+      - ./app/:/app
+    command: python /app/bst.py
