@@ -1,0 +1,51 @@
+version: '3.5'
+networks:
+  app-network:
+    driver: bridge
+  
+services:
+  server-uk:
+    image: nginx
+    volumes:
+      - ./server-uk:/etc/nginx/conf.d
+    networks:
+      - app-network
+  server-us1:
+    image: nginx
+    volumes:
+      - ./server-us1:/etc/nginx/conf.d
+    networks:
+      - app-network
+  server-us2:
+    image: nginx
+    volumes:
+      - ./server-us2:/etc/nginx/conf.d
+    networks:
+      - app-network
+  server-other:
+    image: nginx
+    volumes:
+      - ./server-other:/etc/nginx/conf.d
+    networks:
+      - app-network
+  server-backup:
+    image: nginx
+    volumes:
+      - ./server-backup:/etc/nginx/conf.d
+    networks:
+      - app-network
+  load-balancer:
+    image: anroe/nginx-geoip2
+    volumes:
+      - ./load-balancer:/etc/nginx
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    depends_on:
+      - server-uk
+      - server-us1
+      - server-us2
+      - server-other
+      - server-backup
+      

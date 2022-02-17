@@ -1,0 +1,28 @@
+version: '3.7'
+
+services:
+
+  app:
+    build:
+      context: ./
+      dockerfile: ops/ruby.dockerfile
+    volumes:
+      - ./app/:/app
+    links:
+      - postgres
+    command: ruby /app/seed.rb
+    # command: tail -f '/dev/null'
+    tty: true
+    stdin_open: true
+
+  postgres:
+    image: postgres:14.1-alpine
+    volumes:
+      - ../data/postgres/20_backups__/:/var/lib/postgresql/data
+      - ../data/backups/:/backups
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
+      POSTGRES_DB: mydb

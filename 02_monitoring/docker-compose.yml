@@ -1,0 +1,103 @@
+---
+version: "3.7"
+services:
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - "8083:8083"
+      - "8086:8086"
+      - "8090:8090"
+      - "2003:2003"
+    env_file:
+      - 'env.influxdb'
+    volumes:
+      - ./influxdb/db:/var/lib/influxdb:rw
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    links:
+      - influxdb
+    depends_on:
+      - influxdb
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    user: telegraf:${GID}
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    env_file:
+      - 'env.grafana'
+    user: "0"
+    links:
+      - influxdb
+    volumes:
+      - ./grafana/data:/var/lib/grafana:rw
+
+  # DB
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    env_file:
+      - 'env.mongo'
+    volumes:
+      - ./mongo/db:/data/db:rw
+
+  web-app:
+    build:
+      context: .
+      dockerfile: ./web-app/Dockerfile
+    container_name: web-app
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - elasticsearch
+      - postgres-web-app
+    command: bash -c "cd /app/simple_backend &&
+                      python manage.py migrate &&
+                      python3 /app/simple_backend/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./web-app/:/app:ro
+
+  postgres-web-app:
+    image: postgres:latest
+    container_name: postgres-web-app
+    restart: unless-stopped
+    env_file:
+      - 'env.postgres'
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./postgresql/db:/data/db:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M
+
+  elasticsearch:
+    image: elasticsearch:7.14.2
+    container_name: 09_elasticsearch
+    user: "0"
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    volumes:
+      - ./09_elasticsearch/db:/09_elasticsearch/data:rw
+    environment:
+      - discovery.type=single-node
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 256M

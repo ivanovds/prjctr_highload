@@ -1,0 +1,142 @@
+version: '3.9'
+
+x-redis: &x-redis
+  image: bitnami/redis:6.2
+  environment:
+    ALLOW_EMPTY_PASSWORD: 'yes'
+  # deploy:
+  #   resources:
+  #     limits:
+  #       cpus: '0.50'
+  #       memory: 50M
+
+services:
+  eviction-test:
+    build:
+      context: .
+      dockerfile: ./ops/eviction_test/Dockerfile
+    links:
+      - redis-noeviction
+      - redis-volatile-lru
+      - redis-volatile-lfu
+      - redis-volatile-random
+      - redis-volatile-ttl
+      - redis-allkeys-lru
+      - redis-allkeys-lfu
+      - redis-allkeys-random
+    command: 'tail -f /dev/null'
+    volumes:
+      - ./ops/eviction_test/test.rb:/test.rb
+
+  redis-noeviction:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/noeviction.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-volatile-lru:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/volatile-lru.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-volatile-lfu:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/volatile-lfu.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-volatile-random:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/volatile-random.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-volatile-ttl:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/volatile-ttl.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-allkeys-lru:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/allkeys-lru.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-allkeys-lfu:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/allkeys-lfu.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  redis-allkeys-random:
+    <<: *x-redis
+    volumes:
+      - ../data/redis/eviction_policies/:/bitnami/redis/data/
+      - ./ops/eviction_policies/allkeys-random.conf:/opt/bitnami/redis/mounted-etc/redis.conf
+
+  influxdb:
+    image: influxdb:latest
+    user: "0"
+    ports:
+      - '8083:8083'
+      - '8086:8086'
+      - '8090:8090'
+      - '2003:2003'
+    environment:
+      INFLUXDB_DATA_ENGINE: tsm1
+      INFLUXDB_REPORTING_DISABLED: 'false'
+      INFLUXDB_GRAPHITE_0_ENABLED: 'true'
+      INFLUXDB_GRAPHITE_0_DATABASE: graphite
+      INFLUXDB_GRAPHITE_0_BIND_ADDRESS: ':2003'
+      INFLUXDB_GRAPHITE_PROTOCOL: tcp
+      INFLUXDB_GRAPHITE_BATCH_SIZE: '1000'
+    volumes:
+      - ../data/influxdb:/var/lib/influxdb
+      - ../data/influxdb2:/var/lib/influxdb2
+    links:
+      - redis-volatile-lru
+      - redis-volatile-lfu
+      - redis-volatile-random
+      - redis-volatile-ttl
+      - redis-allkeys-lru
+      - redis-allkeys-lfu
+      - redis-allkeys-random
+
+  telegraf:
+    image: telegraf:latest
+    user: "0"
+    volumes:
+      - ./ops/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORGANIZATION: ${INFLUX_ORGANIZATION}
+      INFLUX_BUCKET: ${INFLUX_BUCKET}
+      REDIS_PATH: ${REDIS_PATH:-redis:6379}
+    links:
+      - influxdb
+      - redis-volatile-lru
+      - redis-volatile-lfu
+      - redis-volatile-random
+      - redis-volatile-ttl
+      - redis-allkeys-lru
+      - redis-allkeys-lfu
+      - redis-allkeys-random
+
+  grafana:
+    image: grafana/grafana:latest
+    user: "0"
+    ports:
+      - '3000:3000'
+    links:
+      - influxdb
+    volumes:
+      - ../data/grafana:/var/lib/grafana
+      - ./grafana_provisioning/:/etc/grafana/provisioning/
+    environment:
+      GF_INSTALL_PLUGINS: grafana-clock-panel,briangann-gauge-panel,natel-plotly-panel,grafana-simple-json-datasource
+      INFLUX_TOKEN: ${INFLUX_TOKEN}
+      INFLUX_ORGANIZATION: ${INFLUX_ORGANIZATION}
+      INFLUX_BUCKET: ${INFLUX_BUCKET}
